@@ -8,6 +8,13 @@ You fill in this comment
 import os
 import sys
 import string
+import nltk
+import re
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+stop_words = set(stopwords.words('english'))
+lemmatizer = WordNetLemmatizer()
 
 
 def create_index(filenames, index, file_titles):
@@ -64,6 +71,31 @@ def create_index(filenames, index, file_titles):
     """
     You implement this function.  Don't forget to remove the 'pass' statement above.
     """
+    nltk.download('punkt')
+    nltk.download('stopwords')
+    nltk.download('wordnet')
+    for filename in filenames:
+        with open(filename, 'r') as file:
+            content = file.read()
+            tokens = word_tokenize(content)
+            def clean_token(token):
+                # This regular expression pattern keeps alphanumeric characters and internal punctuation,
+                # but trims non-alphanumeric characters from the start and end of the token.
+                return re.sub(r'^\W+|\W+$', '', token)
+            all_words = [clean_token(word).lower() for word in tokens if re.search(r'\w', word)]
+            stop_words = set(stopwords.words('english'))
+            filtered_words = [word for word in all_words if word not in stop_words]
+            lemmatizer = WordNetLemmatizer()
+            polished_words = [lemmatizer.lemmatize(word) for word in filtered_words]
+            for word in polished_words:
+                if word in index:
+                    index[word].append(filename)
+                else:
+                    index[word] = [filename]
+            file.seek(0)
+            file_titles[filename] = file.readline().strip()
+
+
 
 
 def search(index, query):
@@ -104,6 +136,24 @@ def search(index, query):
     """
     You implement this function.  Don't forget to remove the 'pass' statement above.
     """
+    tokens = word_tokenize(query)
+    def clean_token(token):
+        # This regular expression pattern keeps alphanumeric characters and internal punctuation,
+        # but trims non-alphanumeric characters from the start and end of the token.
+        return re.sub(r'^\W+|\W+$', '', token)
+    query_words = [clean_token(word).lower() for word in tokens if re.search(r'\w', word)]
+    filtered_query = [word for word in query_words if word not in stop_words]
+    polished_query = [lemmatizer.lemmatize(word) for word in filtered_query]
+    results_found = None
+    for query in polished_query:
+        if query in index:
+            if results_found == None:
+                results_found = set(index[query])
+            else:
+                results_found = results_found & set(index[query])
+        else:
+            return []
+    return list(results_found) if results_found else []
 
 
 ##### YOU SHOULD NOT NEED TO MODIFY ANY CODE BELOW THIS LINE (UNLESS YOU'RE ADDING EXTENSIONS) #####
